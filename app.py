@@ -1,5 +1,5 @@
 import sqlite3
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup # type: ignore
 
 # Sample HTML (replace this with your actual HTML content)
 html_content = """<table>...</table>"""  # Thay bằng HTML của bạn

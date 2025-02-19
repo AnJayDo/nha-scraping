@@ -1,7 +1,7 @@
 import sqlite3
 from slugify import slugify
-from playwright.sync_api import sync_playwright
-from bs4 import BeautifulSoup
+from playwright.sync_api import sync_playwright # type: ignore
+from bs4 import BeautifulSoup # type: ignore
 import time
 
 def fetch_player_stats(player_id, player_name):
