@@ -1,19 +1,23 @@
 import sqlite3
 import time
+
+from constants.const import DATABASE_NAME, WHOSCORED_URL, HEADLESS_MODE
+from constants.sql_queries import INSERT_MATCH_STATISTICS_QUERY, CREATE_MATCH_STATISTICS_TABLE_QUERY
 from slugify import slugify
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 
+
 def fetch_player_stats(player_id, player_name):
     """Fetch and parse match statistics for a given player."""
-    url = f"https://1xbet.whoscored.com/players/{player_id}/matchstatistics/{slugify(player_name, allow_unicode=True)}"
+    url = f"{WHOSCORED_URL}/players/{player_id}/matchstatistics/{slugify(player_name, allow_unicode=True)}"
     print(url)
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)  # Set to True to run in headless mode
+        browser = p.chromium.launch(headless=HEADLESS_MODE)
         page = browser.new_page()
         page.goto(url)
-        page.wait_for_load_state('networkidle')  # Wait for the page to load
+        page.wait_for_load_state('networkidle')
         print("Start scraping")
         html_content = page.content()
 
@@ -23,7 +27,7 @@ def fetch_player_stats(player_id, player_name):
         html_content_def = page.content()
 
         # Click on the 'Offensive' tab and wait for the content to load
-        page.click('a[href="#player-matches-stats-offensive"]')# Wait for the offensive stats table
+        page.click('a[href="#player-matches-stats-offensive"]')
         time.sleep(2)
         html_content_offensive = page.content()
 
@@ -66,7 +70,8 @@ def fetch_player_stats(player_id, player_name):
 
     soup_def = BeautifulSoup(html_content_def, 'html.parser')
     # Extract Defensive statistics
-    defensive_table = soup_def.find('div', {'id': 'player-matches-stats-defensive'}).find('table', {'id': 'top-player-stats-summary-grid'})
+    defensive_table = soup_def.find('div', {'id': 'player-matches-stats-defensive'}).find('table', {
+        'id': 'top-player-stats-summary-grid'})
     if not defensive_table:
         print(f"No defensive statistics table found for {player_name} (ID: {player_id})")
         return None
@@ -87,10 +92,10 @@ def fetch_player_stats(player_id, player_name):
         }
         defensive_stats.append(match)
 
-
     soup_offensive = BeautifulSoup(html_content_offensive, 'html.parser')
     # Extract Offensive statistics
-    offensive_table = soup_offensive.find('div', {'id': 'player-matches-stats-offensive'}).find('table', {'id': 'top-player-stats-summary-grid'})
+    offensive_table = soup_offensive.find('div', {'id': 'player-matches-stats-offensive'}).find('table', {
+        'id': 'top-player-stats-summary-grid'})
     if not offensive_table:
         print(f"No offensive statistics table found for {player_name} (ID: {player_id})")
         return None
@@ -108,7 +113,6 @@ def fetch_player_stats(player_id, player_name):
             'turnovers': columns[13].get_text(strip=True),
         }
         offensive_stats.append(match)
-    
 
     soup_passing = BeautifulSoup(html_content_passing, 'html.parser')
     # Extract Passing statistics
@@ -142,90 +146,36 @@ def fetch_player_stats(player_id, player_name):
         print(f"{key}: {value}")
     return combined_stats
 
+
 def store_stats(player_id, stats):
     """Store the fetched statistics into the database."""
-    conn = sqlite3.connect('premier_league.db')
+    conn = sqlite3.connect(DATABASE_NAME)
     cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS match_statistics (
-            player_id INTEGER,
-            opponent TEXT,
-            date TEXT,
-            position TEXT,
-            minutes_played INTEGER,
-            goals INTEGER,
-            assists INTEGER,
-            yellow_cards INTEGER,
-            red_cards INTEGER,
-            shots INTEGER,
-            pass_success REAL,
-            aerials_won INTEGER,
-            tackles INTEGER,
-            interceptions INTEGER,
-            fouls INTEGER,
-            offside_provoked INTEGER,
-            clearances INTEGER,
-            challenge_lost INTEGER,
-            blocks INTEGER,
-            own_goals INTEGER,
-                   
-            key_passes INTEGER,
-            dribble_won INTEGER,
-            fouled INTEGER,
-            offside_given INTEGER,
-            dispossessed INTEGER,
-            turnovers INTEGER,
-                   
-            total_passes INTEGER,
-            pass_cross_accurate INTEGER,
-            pass_long_ball_accurate INTEGER,
-            pass_through_ball_accurate INTEGER,
-                   
-            rating REAL,
-            FOREIGN KEY (player_id) REFERENCES players (playerId)
-        )
-    ''')
+    cursor.execute(CREATE_MATCH_STATISTICS_TABLE_QUERY)
 
     for stat in stats:
-        cursor.execute('''
-            INSERT INTO match_statistics (
-                player_id, opponent, date, position, minutes_played, goals, assists,
-                yellow_cards, red_cards, shots, pass_success, aerials_won, 
-                tackles,
-                interceptions, fouls, offside_provoked, clearances, challenge_lost, blocks, own_goals, 
-                key_passes, dribble_won, fouled, offside_given, dispossessed, turnovers,
-                total_passes, pass_cross_accurate, pass_long_ball_accurate, pass_through_ball_accurate,
-                rating
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
-                      ?, ?, ?, ?, ?, ?,
-                      ?, ?, ?, ?,
-                      ?
-                       )
-        ''', (
+        cursor.execute(INSERT_MATCH_STATISTICS_QUERY, (
             player_id, stat['opponent'], stat['date'], stat['position'],
             stat['minutes_played'], stat['goals'], stat['assists'],
             stat['yellow_cards'], stat['red_cards'], stat['shots'],
-            stat['pass_success'], stat['aerials_won'], 
-            # Defensive
+            stat['pass_success'], stat['aerials_won'],
             stat['tackles'],
             stat['interceptions'], stat['fouls'], stat['offside_provoked'],
             stat['clearances'], stat['challenge_lost'], stat['blocks'],
-            stat['own_goals'], 
-            # Offensive
-            stat['key_passes'],stat['dribble_won'],stat['fouled'],
-            stat['offside_given'],stat['dispossessed'],stat['turnovers'],
-            #Passing
-            stat['total_passes'],stat['pass_cross_accurate'],
-            stat['pass_long_ball_accurate'],stat['pass_through_ball_accurate'],
-            
+            stat['own_goals'],
+            stat['key_passes'], stat['dribble_won'], stat['fouled'],
+            stat['offside_given'], stat['dispossessed'], stat['turnovers'],
+            stat['total_passes'], stat['pass_cross_accurate'],
+            stat['pass_long_ball_accurate'], stat['pass_through_ball_accurate'],
             stat['rating']
         ))
 
     conn.commit()
     conn.close()
 
+
 def main():
-    conn = sqlite3.connect('premier_league.db')
+    conn = sqlite3.connect(DATABASE_NAME)
     cursor = conn.cursor()
     cursor.execute('SELECT playerId, name FROM players')
     players = cursor.fetchall()
@@ -239,6 +189,7 @@ def main():
             print(f"Stats for {player_name} stored successfully.")
         else:
             print(f"Failed to fetch or store stats for {player_name}.")
+
 
 if __name__ == '__main__':
     main()

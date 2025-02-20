@@ -1,61 +1,38 @@
 import sqlite3
 from bs4 import BeautifulSoup
 import time
+
+from constants.const import COUNTRY_MAPPING, WHOSCORED_URL, DATABASE_NAME, HEADLESS_MODE
+from constants.sql_queries import CREATE_PLAYERS_TABLE_QUERY, INSERT_PLAYERS_QUERY
 from slugify import slugify
-from playwright.sync_api import sync_playwright, Playwright
+from playwright.sync_api import sync_playwright
 import os
+
 
 # Function to convert team name to a slug format
 def team_name_to_slug(name):
     return slugify(text=name, allow_unicode=True)
 
+
 # Helper function to convert country code to full country name
 def get_country_name(country_code):
-    # Add a mapping of country codes to full names
-    country_mapping = {
-        "eg": "Egypt",
-        "gb-eng": "England",
-        "co": "Colombia",
-        "nl": "Netherlands",
-        "ar": "Argentina",
-        "fr": "France",
-        "hu": "Hungary",
-        "br": "Brazil",
-        "pt": "Portugal",
-        "gb-sct": "Scotland",
-        "ie": "Ireland",
-        "gr": "Greece",
-        "uy": "Uruguay",
-        "cz": "Czech Republic",
-        "gb-nir": "Northern Ireland",
-        "it": "Italy",
-        "jp": "Japan",
-    }
-    return country_mapping.get(country_code.lower(), "Unknown")
+    return COUNTRY_MAPPING.get(country_code.lower(), "Unknown")
+
 
 # Function to scrape player details from a team page
 def scrape_players(team_id, team_name):
-    url = f"https://1xbet.whoscored.com/teams/{team_id}/show/england-{team_name_to_slug(team_name)}"
+    url = f"{WHOSCORED_URL}/teams/{team_id}/show/england-{team_name_to_slug(team_name)}"
     print(f"Scraping players from: {url}")
-    
+
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)  # Set headless=False if you want to see the browser
+        browser = p.chromium.launch(headless=HEADLESS_MODE)
         page = browser.new_page()
 
         try:
-            page.goto(url)  # Navigate to the URL
-            page.wait_for_load_state('networkidle')  # Wait for the page to load
+            page.goto(url)
+            page.wait_for_load_state('networkidle')
             time.sleep(3)
-
-            # Wait for the element with the class 'team-squad-stats-summary'
-            # print("Waiting for team-squad-stats-summary to be visible")
-            # page.wait_for_selector(".team-squad-stats-summary", state="attached")
-            print("Tag team-squad-stats-summary is attached")
-
-            # Get the page HTML after JavaScript rendering
             page_content = page.content()
-
-            # Parse the HTML with BeautifulSoup
             soup = BeautifulSoup(page_content, "html.parser")
 
             # Define the directory and filename
@@ -69,7 +46,7 @@ def scrape_players(team_id, team_name):
             # Write the parsed HTML to the file
             with open(file_path, "w", encoding="utf-8") as file:
                 file.write(str(soup))
-                
+
             # Find all player containers
             players = []
             print("Start getting players")
@@ -79,7 +56,7 @@ def scrape_players(team_id, team_name):
                     # Extract player ID from the href attribute
                     player_link = player.find("a", class_="player-link")
                     href = player_link["href"]
-                    player_id = int(href.split("/")[2])  # Extract ID from href
+                    player_id = int(href.split("/")[2])
 
                     # Extract name
                     name = player_link.find("span", class_="iconize").text.strip()
@@ -133,13 +110,14 @@ def scrape_players(team_id, team_name):
                         positions = player_meta_data_spans[1].text.strip()
 
                     # Append player data to the list
-                    players.append((player_id, team_id, name, full_name, team_name, shirt_number, age, height, weight, nationality, positions, 
-                                    apps_str, mins_played, goals, assists, yellow_cards, red_cards, shots_per_game, pass_success, aerials_won,
+                    players.append((player_id, team_id, name, full_name, team_name, shirt_number, age, height, weight,
+                                    nationality, positions,
+                                    apps_str, mins_played, goals, assists, yellow_cards, red_cards, shots_per_game,
+                                    pass_success, aerials_won,
                                     motm, rating))
-                except Exception as e:
-                    print(f"Error parsing player: {e}")
+                except:
                     continue
-            
+
         except Exception as e:
             print(f"⚠️ Failed to fetch {url}: {e}")
             players = []
@@ -148,108 +126,46 @@ def scrape_players(team_id, team_name):
 
     return players
 
-# Connect to SQLite database
-conn = sqlite3.connect("premier_league.db")
-cursor = conn.cursor()
 
-# Create `players` table if not exists
-cursor.execute('''
-CREATE TABLE IF NOT EXISTS players (
-    playerId INTEGER PRIMARY KEY,
-    teamId INTEGER NOT NULL,
-    name TEXT NULL,
-    fullName TEXT NULL,
-    currentTeam TEXT NULL,
-    shirtNumber TEXT NULL,
-    age TEXT NULL,
-    height TEXT NULL,
-    weight TEXT NULL,
-    nationality TEXT NULL,
-    positions TEXT NULL,
-    appsStr TEXT NULL,
-    minsPlayed TEXT NULL, 
-    goals TEXT NULL, 
-    assists TEXT NULL,
-    yellowCards TEXT NULL,
-    redCards TEXT NULL, 
-    shotsPerGame TEXT NULL, 
-    passSuccess TEXT NULL, 
-    aerialsWon TEXT NULL,
-    motm TEXT NULL, 
-    rating TEXT NULL,
-    FOREIGN KEY (teamId) REFERENCES teams(teamId)
-)
-''')
+def connect_database():
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute(CREATE_PLAYERS_TABLE_QUERY)
+    return conn, cursor
 
-# Fetch teams from SQLite
-cursor.execute("SELECT teamId, teamName FROM teams")
-teams = cursor.fetchall()
 
-for team_id, team_name in teams:
-    print(f"Scraping players for team: {team_name} (ID: {team_id})")
-    players = scrape_players(team_id, team_name)
-    
-    if not players:
-        print(f"No players found for {team_name}. Skipping.")
-        continue
-    
+def fetch_teams(cursor):
+    cursor.execute("SELECT teamId, teamName FROM teams")
+    return cursor.fetchall()
+
+
+def save_players_to_db(cursor, players):
     for player in players:
         try:
-            cursor.execute('''
-                INSERT INTO players (
-                    playerId, 
-                    teamId, 
-                    name, 
-                    fullName, 
-                    currentTeam, 
-                    shirtNumber, 
-                    age, 
-                    height, 
-                    weight, 
-                    nationality, 
-                    positions, 
-                    appsStr, 
-                    minsPlayed, 
-                    goals, 
-                    assists, 
-                    yellowCards, 
-                    redCards, 
-                    shotsPerGame, 
-                    passSuccess, 
-                    aerialsWon, 
-                    motm, 
-                    rating
-                )
-                VALUES (
-                    ?, 
-                    ?, 
-                    ?, 
-                    ?, 
-                    ?, 
-                    ?, 
-                    ?, 
-                    ?, 
-                    ?, 
-                    ?, 
-                    ?, 
-                    ?, 
-                    ?, 
-                    ?, 
-                    ?, 
-                    ?, 
-                    ?, 
-                    ?, 
-                    ?, 
-                    ?, 
-                    ?, 
-                    ?)
-            ''', player)
+            cursor.execute(INSERT_PLAYERS_QUERY, player)
         except sqlite3.Error as e:
             print(f"❌ Error inserting player data into database: {e}")
-    
-    conn.commit()
-    time.sleep(2)  # Delay to avoid rate limiting
 
-# Close connection
-conn.close()
-print("✅ Player data successfully saved to SQLite!")
+
+def main():
+    conn, cursor = connect_database()
+    teams = fetch_teams(cursor)
+
+    for team_id, team_name in teams:
+        print(f"Scraping players for team: {team_name} (ID: {team_id})")
+        players = scrape_players(team_id, team_name)
+
+        if players:
+            save_players_to_db(cursor, players)
+            conn.commit()
+        else:
+            print(f"No players found for {team_name}. Skipping.")
+
+        time.sleep(2)  # Delay to avoid rate limiting
+
+    conn.close()
+    print("✅ Player data successfully saved to SQLite!")
+
+
+if __name__ == "__main__":
+    main()
