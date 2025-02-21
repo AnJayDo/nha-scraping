@@ -113,3 +113,72 @@ INSERT_MATCH_STATISTICS_QUERY = '''
         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         )'''
+
+
+ADD_COLUMN_SCORE_PLAYERS_QUERY = '''
+    ALTER TABLE players ADD COLUMN score REAL DEFAULT 0;'''
+ADD_COLUMN_POSITIVE_SCORE_PLAYERS_QUERY = '''
+    ALTER TABLE players ADD COLUMN possitive_score REAL DEFAULT 0;'''
+ADD_COLUMN_NEGATIVE_SCORE_PLAYERS_QUERY = '''
+    ALTER TABLE players ADD COLUMN negative_score REAL DEFAULT 0;'''
+ADD_COLUMN_ATTACK_SCORE_PLAYERS_QUERY = '''
+    ALTER TABLE players ADD COLUMN attack_score REAL DEFAULT 0;'''
+ADD_COLUMN_DEFEND_SCORE_PLAYERS_QUERY = '''
+    ALTER TABLE players ADD COLUMN defend_score REAL DEFAULT 0;'''
+ADD_COLUMN_POSSESSION_SCORE_PLAYERS_QUERY = '''
+    ALTER TABLE players ADD COLUMN possession_score REAL DEFAULT 0;'''
+
+ADD_COLUMN_AVG_MEMBER_SCORE_TEAM_QUERY = '''
+    ALTER TABLE teams ADD COLUMN avg_member_score REAL DEFAULT 0;'''
+ADD_COLUMN_ATTACK_SCORE_TEAM_QUERY = '''
+    ALTER TABLE teams ADD COLUMN attack_score REAL DEFAULT 0;'''
+ADD_COLUMN_DEFEND_SCORE_TEAM_QUERY = '''
+    ALTER TABLE teams ADD COLUMN defend_score REAL DEFAULT 0;'''
+
+ADD_COLUMN_DISCIPLINE_SCORE_TEAM_QUERY = '''
+    ALTER TABLE teams ADD COLUMN discipline_score REAL DEFAULT 0;'''
+ADD_COLUMN_HEALTHY_SCORE_TEAM_QUERY = '''
+    ALTER TABLE teams ADD COLUMN healthy_score REAL DEFAULT 0;'''
+
+UPDATE_PLAYERS_SCORE_QUERY = '''
+    UPDATE players SET score = ?, possitive_score = ?, negative_score = ?, attack_score = ?, defend_score = ? WHERE playerId = ?'''
+
+UPDATE_AVG_MEMBER_SCORE_TEAM_QUERY = '''
+    UPDATE teams SET avg_member_score = ?, healthy_score = ?, discipline_score = ?, attack_score = ?, defend_score = ? WHERE teamId = ?'''
+
+
+CREATE_HISTORY_TABLE_QUERY = '''
+    CREATE TABLE IF NOT EXISTS histories (
+        id INTEGER PRIMARY KEY,
+        date TEXT,
+        playerId INTEGER,
+        teamId INTEGER,
+        score REAL,
+        possitive_score REAL,
+        negative_score REAL
+    )'''
+
+INSERT_HISTORY_TABLE_QUERY = '''
+    INSERT INTO histories (date, playerId, teamId, score, possitive_score, negative_score) VALUES (?, ?, ?, ?, ?, ?)'''
+
+
+GET_PLAYERS_PAGING_QUERY = '''
+    SELECT * FROM players
+    LIMIT ? OFFSET ?
+'''
+
+GET_MATCH_STATISTICS_BY_PLAYER_ID_QUERY = '''
+    SELECT * FROM match_statistics WHERE player_id = ? ORDER BY date DESC
+'''
+
+GET_TOP_PLAYERS_QUERY = '''
+    SELECT name, score,currentTeam, goals, assists, minsPlayed, shotsPerGame FROM players ORDER BY score DESC LIMIT 10
+'''
+
+GET_WORST_PLAYERS_QUERY = '''
+    SELECT name, score, currentTeam, minsPlayed, yellowCards, redCards FROM players ORDER BY score ASC LIMIT 10
+'''
+
+GET_TEAMS_QUERY = '''
+    SELECT * FROM teams
+'''
