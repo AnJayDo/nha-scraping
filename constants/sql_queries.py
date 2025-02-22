@@ -172,7 +172,7 @@ GET_MATCH_STATISTICS_BY_PLAYER_ID_QUERY = '''
 '''
 
 GET_TOP_PLAYERS_QUERY = '''
-    SELECT name, score,currentTeam, goals, assists, minsPlayed, shotsPerGame FROM players ORDER BY score DESC LIMIT 10
+    SELECT name, score,currentTeam, goals, assists, minsPlayed, shotsPerGame, playerId FROM players ORDER BY score DESC LIMIT 10
 '''
 
 GET_WORST_PLAYERS_QUERY = '''

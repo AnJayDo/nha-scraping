@@ -1,69 +1,33 @@
-import sqlite3
-from constants.const import DATABASE_NAME
-import json
-from analytic.analytic import calculate_percentage_of_players_in_the_game, update_players_and_teams_table, calculate_team_score, clear_history_table
-from bs4 import BeautifulSoup # type: ignore
+from flask import Flask, jsonify
+import secrets
+import os
+from services.api import get_top_players, get_top_teams, get_player_detail, get_team_detail
 
+secret_key = secrets.token_hex(16)
+app = Flask(__name__)
+app.config['SECRET_KEY']=secret_key
 
-def crawl_data_from_html():
-    # Sample HTML (replace this with your actual HTML content)
-    html_content = """<table>...</table>"""  # Thay bằng HTML của bạn
+@app.route('/top-players' , methods=['GET'])
+def top_players():
+    top_players = get_top_players()
+    return jsonify(top_players)
 
-    # Parse HTML using BeautifulSoup
-    soup = BeautifulSoup(html_content, 'html.parser')
-    table = soup.find('table')
+@app.route('/top-teams' , methods=['GET'])
+def top_teams():
+    top_teams = get_top_teams()
+    return jsonify(top_teams)
 
-    # Extract headers
-    headers = [th.text.strip() for th in table.find_all('th')]
+@app.route('/player/<player_id>' , methods=['GET'])
+def player_detail(player_id):
+    player_detail = get_player_detail(player_id)
+    return jsonify(player_detail)
 
-    # Extract rows
-    data = []
-    for row in table.find_all('tr')[1:]:  # Skip header row
-        cols = [td.text.strip() for td in row.find_all('td')]
-        data.append(cols)
+@app.route('/team/<team_id>' , methods=['GET'])
+def team_detail(team_id):
+    team_detail = get_team_detail(team_id)
+    return jsonify(team_detail)
 
-    # Create SQLite database
-    conn = sqlite3.connect(DATABASE_NAME)
-    cursor = conn.cursor()
-
-    # Define table schema dynamically
-    columns = ', '.join([f'"{col}" TEXT' for col in headers])
-    cursor.execute(f'CREATE TABLE IF NOT EXISTS players ({columns})')
-
-    # Insert data
-    for row in data:
-        placeholders = ', '.join(['?'] * len(row))
-        cursor.execute(f'INSERT INTO players VALUES ({placeholders})', row)
-
-    # Commit and close
-    conn.commit()
-    conn.close()
-
-    print("Data successfully inserted into SQLite database!")
-
-
-def analytic():
-    clear_history_table()
-    rule = json.load(open("rule.json"))
-    calculate_percentage_of_players_in_the_game(rule)
-    calculate_team_score()
-
-def update_table():
-    update_players_and_teams_table()
-
-
-def main():
-    # Step 1: Crawl data from html
-    # crawl_data_from_html()
-
-    # Step 2: Update table - only run once
-    update_table()
-
-    # Step 3: Analytic
-    analytic()
-
-    pass   
-
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)

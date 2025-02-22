@@ -10,6 +10,7 @@ def get_top_players():
     top_players = cursor.fetchall()
     for player in top_players:
         result.append({
+            "player_id": player[7],
             "name": player[0],
             "score": player[1],
             "stats": [
