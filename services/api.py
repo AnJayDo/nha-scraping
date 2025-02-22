@@ -86,12 +86,12 @@ def get_team_detail(team_id):
     result.append({
         "name": team[0],
         "stats": [
-            {"label": "avg_member_score", "value": team[1], "max_value": 150},
-            {"label": "attack_score", "value": team[2], "max_value": 200},
+            {"label": "avg_member_score", "value": team[1] - 50, "max_value": 150},
+            {"label": "attack_score", "value": team[2] / 2, "max_value": 200},
             {"label": "defend_score", "value": team[3], "max_value": 100},
-            {"label": "possession", "value": team[4], "max_value": 1},
-            {"label": "discipline_score", "value": 50 - team[5], "max_value": 50},
-            {"label": "healthy_score", "value": team[6], "max_value": 22}
+            {"label": "possession", "value": team[4] * 100, "max_value": 1},
+            {"label": "discipline_score", "value": 100 - team[5], "max_value": 50},
+            {"label": "healthy_score", "value": team[6] * 4.5, "max_value": 22}
         ]
     })
     cursor.close()
