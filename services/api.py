@@ -13,12 +13,13 @@ def get_top_players():
             "player_id": player[7],
             "name": player[0],
             "score": player[1],
+            "color": MAPPING_TEAM_COLOR[player[8]],
             "stats": [
                 {"label": "currentTeam", "value": player[2]},
                 {"label": "goals", "value": player[3]},
                 {"label": "assists", "value": player[4]},
                 {"label": "minsPlayed", "value": player[5]},
-                {"label": "shotsPerGame", "value": player[6]}
+                {"label": "shotsPerGame", "value": player[6]},
             ]
             })
     cursor.execute(GET_WORST_PLAYERS_QUERY)

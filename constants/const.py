@@ -16,3 +16,27 @@ BMR_MALE_20 = 1800
 
 MOTM_SCORE = 5
 HEALTHY_SCORE = 10
+
+# list different colors by team id
+MAPPING_TEAM_COLOR = {
+    13: "red",
+    14: "black",
+    15: "blue",
+    18: "pink",
+    23: "green",
+    24: "yellow",
+    26: "orange",
+    29: "purple",
+    30: "gray",
+    31: "brown",
+    32: "#F4A460",
+    161: "#FF00FF",
+    162: "#C0C0C0",
+    165: "#808080",
+    167: "#800000",
+    170: "#808000",
+    174: "#008000",
+    183: "#800080",
+    189: "#008080",
+    211: "#000080",
+}
