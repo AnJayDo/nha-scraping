@@ -26,8 +26,10 @@ def get_top_players():
     worst_players = cursor.fetchall()
     for player in worst_players:
         result.append({
+            "player_id": player[6],
             "name": player[0],
             "score": player[1],
+            "color": MAPPING_TEAM_COLOR[player[7]],
             "stats": [
                 {"label": "currentTeam", "value": player[2]},
                 {"label": "minsPlayed", "value": player[3]},
@@ -44,10 +46,11 @@ def get_top_teams():
     result = []
     conn = sqlite3.connect(DATABASE_NAME)
     cursor = conn.cursor()
-    cursor.execute("SELECT name, avg_member_score, goal, possession FROM teams ORDER BY avg_member_score DESC")
+    cursor.execute("SELECT name, avg_member_score, goal, possession, teamId FROM teams ORDER BY avg_member_score DESC")
     top_teams = cursor.fetchall()
     for team in top_teams:
         result.append({
+            "id": team[4],
             "name": team[0],
             "score": team[1],
             "stats": [
@@ -76,6 +79,48 @@ def get_player_detail(player_id):
     conn.close()
 
     return result
+
+
+def safe_float(value):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+def get_extreme_values():
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT MAX(goals + assists), MIN(goals + assists), MAX(yellowCards * 10 + redCards * 20), MIN(yellowCards * 10 + redCards * 20), MAX(passSuccess), MIN(passSuccess), MAX(150 - (yellowCards * 10 + redCards * 30)), MIN(150 - (yellowCards * 10 + redCards * 30)), MAX((height + weight) / 2), MIN((height + weight) / 2), MAX(aerialsWon), MIN(aerialsWon) FROM players")
+    extremes = cursor.fetchone()
+    conn.close()
+    
+    return tuple(safe_float(value) for value in extremes) if extremes else (150.0, 0.0, 150.0, 0.0, 150.0, 0.0, 150.0, 0.0, 150.0, 0.0, 150.0, 0.0)
+
+def get_player_stats(player_id):
+    extremes = get_extreme_values()
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT goals, assists, passSuccess, yellowCards, redCards, aerialsWon, height, weight FROM players WHERE playerId = ?", (player_id,))
+    player = cursor.fetchone()
+    conn.close()
+    
+    if not player:
+        return None
+    
+    if not player:
+        return None
+    
+    goals, assists, pass_success, yellow_cards, red_cards, aerials_won, height, weight = map(safe_float, player)
+    
+    data = [
+        {"subject": "Offensive", "A": goals + assists, "B": extremes[1], "fullMark": extremes[0]},
+        {"subject": "Defensive", "A": yellow_cards * 10.0 + red_cards * 20.0, "B": extremes[3], "fullMark": extremes[2]},
+        {"subject": "Passing", "A": pass_success, "B": extremes[5], "fullMark": extremes[4]},
+        {"subject": "Discipline", "A": max(150.0 - (yellow_cards * 10.0 + red_cards * 30.0), 0.0), "B": extremes[7], "fullMark": extremes[6]},
+        {"subject": "Physique", "A": (height + weight) / 2.0 if height and weight else 0.0, "B": extremes[9], "fullMark": extremes[8]},
+        {"subject": "Aerials Won", "A": aerials_won, "B": extremes[11], "fullMark": extremes[10]},
+    ]
+    return data
 
 def get_team_detail(team_id):
     result = []

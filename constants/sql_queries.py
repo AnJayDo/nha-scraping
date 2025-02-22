@@ -176,7 +176,7 @@ GET_TOP_PLAYERS_QUERY = '''
 '''
 
 GET_WORST_PLAYERS_QUERY = '''
-    SELECT name, score, currentTeam, minsPlayed, yellowCards, redCards FROM players ORDER BY score ASC LIMIT 10
+    SELECT name, score, currentTeam, minsPlayed, yellowCards, redCards, playerId, teamId  FROM players ORDER BY score ASC LIMIT 10
 '''
 
 GET_TEAMS_QUERY = '''

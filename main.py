@@ -1,7 +1,7 @@
 from flask import Flask, jsonify
 import secrets
 import os
-from services.api import get_top_players, get_top_teams, get_player_detail, get_team_detail
+from services.api import get_top_players, get_top_teams, get_player_detail, get_team_detail, get_player_stats
 
 secret_key = secrets.token_hex(16)
 app = Flask(__name__)
@@ -19,7 +19,7 @@ def top_teams():
 
 @app.route('/player/<player_id>' , methods=['GET'])
 def player_detail(player_id):
-    player_detail = get_player_detail(player_id)
+    player_detail = get_player_stats(player_id)
     return jsonify(player_detail)
 
 @app.route('/team/<team_id>' , methods=['GET'])
